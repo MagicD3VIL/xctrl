@@ -1,3 +1,14 @@
+This is a fork of https://github.com/yetanothergeek/xctrl modified to
+allow multiple instances of xctrl within Lua.
+
+I use this invocation to get it to build properly:
+
+make install EXTRA_CFLAGS="-I/usr/include/lua5.1 -fPIC" EXTRA_LDFLAGS="-Wl,--no-as-needed"
+
+----------------
+
+Original README:
+
 The X11 control library is a shared library that allows you to query and
 manipulate various aspects of an X11 window manager and the windows it manages. 
 
