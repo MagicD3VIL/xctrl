@@ -66,11 +66,7 @@ typedef struct _XCtrl {
   Display* dpy;
   char *dpyname;
   char* charset;
-  XErrorHandler old_err_handler;
 } XCtrl;
-
-static XCtrl*wm=NULL;
-
 
 static XCtrl*lwmc_check_obj(lua_State*L) {
   return (XCtrl*)luaL_checkudata(L,1,XCTRL_META_NAME);
@@ -89,29 +85,24 @@ static int lwmc_failure(lua_State*L, const char*msg)
 
 static int lwmc_new(lua_State*L)
 {
-  if (wm==NULL) {
-    const char*req_dpyname=luaL_optstring(L,1,NULL);
-    char*act_dpyname=XDisplayName(req_dpyname);
-    Display*dpy=XOpenDisplay(req_dpyname);
-    if (!dpy) {
-      return lwmc_failure(L, "Can't open display.");
-    }
-    wm=(XCtrl*)lua_newuserdata(L,sizeof(XCtrl));
-    memset(wm,0,sizeof(XCtrl));
-    if (act_dpyname) { wm->dpyname=strdup(act_dpyname); }
-    wm->dpy=dpy;
-    luaL_getmetatable(L, XCTRL_META_NAME);
-    lua_setmetatable(L, -2);
-    wm->old_err_handler=XSetErrorHandler(lwmc_handle_error);
-    if (lua_gettop(L)>1) {
-      int force_utf8=lua_toboolean(L,2);
-      const char*charset=luaL_optstring(L,3,NULL);
-      if (charset) { wm->charset=strdup(charset); }
-      init_charset(force_utf8,wm->charset);
-    }
-  } else {
-    luaL_error(L,"Only one instance of "XCTRL_META_NAME" is allowed.");
-    return 0;
+  const char*req_dpyname=luaL_optstring(L,1,NULL);
+  char*act_dpyname=XDisplayName(req_dpyname);
+  Display*dpy=XOpenDisplay(req_dpyname);
+  if (!dpy) {
+    return lwmc_failure(L, "Can't open display.");
+  }
+  XCtrl*wm=(XCtrl*)lua_newuserdata(L,sizeof(XCtrl));
+  memset(wm,0,sizeof(XCtrl));
+  if (act_dpyname) { wm->dpyname=strdup(act_dpyname); }
+  wm->dpy=dpy;
+  luaL_getmetatable(L, XCTRL_META_NAME);
+  lua_setmetatable(L, -2);
+  XSetErrorHandler(lwmc_handle_error);
+  if (lua_gettop(L)>1) {
+    int force_utf8=lua_toboolean(L,2);
+    const char*charset=luaL_optstring(L,3,NULL);
+    if (charset) { wm->charset=strdup(charset); }
+    init_charset(force_utf8,wm->charset);
   }
   return 1;
 }
@@ -121,11 +112,9 @@ static int lwmc_new(lua_State*L)
 static int lwmc_gc(lua_State*L)
 {
   XCtrl*ud=lwmc_check_obj(L);
-  XSetErrorHandler(wm->old_err_handler);
   XCloseDisplay(ud->dpy);
-  if (wm->dpyname) { free(ud->dpyname); }
-  if (wm->charset) { free(ud->charset); }
-  wm=NULL;
+  if (ud->dpyname) { free(ud->dpyname); }
+  if (ud->charset) { free(ud->charset); }
   return 1;
 }
 
@@ -744,7 +733,7 @@ static int lwmc_get_win_list(lua_State*L)
 
 static int lwmc_tostring(lua_State*L)
 {
-  lua_pushfstring(L,"%s (%p)", XCTRL_META_NAME, wm);
+  lua_pushfstring(L,"%s",XCTRL_META_NAME);
   return 1;
 }
 
