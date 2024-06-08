@@ -3,6 +3,13 @@
 #  detailed list of changes, see the git log.
 ##########################################################
 
+2024-06-08:
+  @MagicD3VIL fork: Added "keypress" event to listen(). 
+  Added the string_to_keysym() function.
+
+2020-06-29:
+  @tobias fork: Allow multiple instances of xctrl within Lua.
+
 2015-03-18:
   Moved source code repository from googlecode to github
 

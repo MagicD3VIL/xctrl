@@ -1,3 +1,15 @@
+This is a fork of https://github.com/tobias/xctrl, which adds a keyboard keypress 
+event to the listen() function, which now not only allows this library to send 
+keypresses to a specific window, but to listen for them as well.
+
+A string_to_keysym() function was also added, which can be handy when combined 
+with the existing send_keys() function. For example, when you have a keysym number 
+but require a string representation of that key. I.e. from keysym 88 to char "W". 
+
+Tested with Lua 5.3.6. The `-fPIC` build flag was added to the makefile for convenience.
+
+----------------
+
 This is a fork of https://github.com/yetanothergeek/xctrl modified to
 allow multiple instances of xctrl within Lua.
 
