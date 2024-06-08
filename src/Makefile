@@ -7,7 +7,7 @@ LUA=lua
 INSTALL=install
 DESTDIR=`${LUA} -e 'p=package.cpath:gsub(".-(/[^;]+/).*","%1");print(p)'`
 
-WARN_FLAGS=-Wall -pedantic -Wshadow -Wunused -Wbad-function-cast -Wmissing-prototypes
+WARN_FLAGS=-Wall -pedantic -Wshadow -Wunused -Wbad-function-cast -Wmissing-prototypes -fPIC
 VERSION=1.09
 
 CFLAGS= ${EXTRA_CFLAGS} -Wall -DVERSION=\"$(VERSION)\"

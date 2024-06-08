@@ -129,6 +129,7 @@ XCTRL_API long get_desktop_of_window(Display*disp, Window win);
 XCTRL_API ulong get_win_pid(Display*disp, Window win);
 XCTRL_API char* get_client_machine(Display*disp, Window win);
 XCTRL_API void send_keystrokes(Display*disp, Window win, const char*keys);
+XCTRL_API long string_to_keysym(const char*str);
 
 /* Desktop information and manipulation functions */
 XCTRL_API int get_showing_desktop(Display*disp);
@@ -168,11 +169,12 @@ enum {
   XCTRL_EVENT_WINDOW_MOVE_RESIZE,
   XCTRL_EVENT_WINDOW_TITLE,
   XCTRL_EVENT_WINDOW_STATE,  
-  XCTRL_EVENT_DESKTOP_SWITCH
+  XCTRL_EVENT_DESKTOP_SWITCH,
+  XCTRL_EVENT_KEY_PRESS
 };
 
 /* Event listener callback type */
-typedef int (*EventCallback) (int ev, Window win, void*cb_data);
+typedef int (*EventCallback) (int ev, Window win, void*cb_data, int detail);
 
 /* Event listener function */
 XCTRL_API void event_loop(Display*disp, EventCallback cb, void*cb_data);

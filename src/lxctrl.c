@@ -864,6 +864,16 @@ static int lwmc_convert_locale(lua_State*L)
 
 
 
+static int lwmc_string_to_keysym(lua_State*L)
+{
+  lwmc_check_obj(L);
+  const char*str=luaL_checkstring(L,2);
+  lua_pushnumber(L,string_to_keysym(str));
+  return 1;
+}
+
+
+
 static int lwmc_do_events(lua_State*L)
 {
   XCtrl*ud=lwmc_check_obj(L);
@@ -912,7 +922,7 @@ typedef struct {
 
 
 
-static int lwmc_listen_cb(int ev, Window id, void*p)
+static int lwmc_listen_cb(int ev, Window id, void*p, int detail)
 {
   const char* evmap[] = {
     "w", /* XCTRL_EVENT_WINDOW_LIST_INSERT */
@@ -923,12 +933,14 @@ static int lwmc_listen_cb(int ev, Window id, void*p)
     "t", /* XCTRL_EVENT_WINDOW_TITLE */
     "s", /* XCTRL_EVENT_WINDOW_STATE */
     "d", /* XCTRL_EVENT_DESKTOP_SWITCH */
+    "k", /* XCTRL_EVENT_KEY_PRESS */
   };
   cbdata*c=(cbdata*)p;
   lua_rawgeti(c->L, LUA_REGISTRYINDEX, c->i);
   lua_pushstring(c->L, evmap[ev]);
   lua_pushnumber(c->L, (ev==XCTRL_EVENT_DESKTOP_SWITCH)?id+1:id);
-  lua_pcall(c->L, 2, 1, 0);
+  lua_pushnumber(c->L, detail);
+  lua_pcall(c->L, 3, 1, 0);
   return lua_toboolean(c->L,-1); 
 }
 
@@ -987,6 +999,7 @@ static const struct luaL_Reg lwmc_funcs[] = {
   {"set_showing_desk",lwmc_set_showing_desktop},
   {"get_showing_desk",lwmc_get_showing_desktop},
   {"send_keys",       lwmc_send_keys},
+  {"string_to_keysym",lwmc_string_to_keysym},
   {"do_events",       lwmc_do_events},
   {"convert_locale",  lwmc_convert_locale},
   {"get_selection",   lwmc_get_selection},

@@ -44,6 +44,7 @@ Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <X11/Xatom.h>
 #include <X11/cursorfont.h>
 #include <X11/Xmu/WinUtil.h>
+#include <X11/XKBlib.h>
 
 #include <iconv.h>
 #include <errno.h>
@@ -1033,6 +1034,15 @@ XCTRL_API void send_keystrokes(Display*disp, Window win, const char*keys)
   }
 }
 
+
+
+XCTRL_API long string_to_keysym(const char*str)
+{
+  return XStringToKeysym(str);
+}
+
+
+
 /*********************************************************************/
 /* * * * * * * * * Clipboard and selection functions * * * * * * * * */
 /*********************************************************************/
@@ -1459,7 +1469,7 @@ static void winlist_add_item(WinListItem**list, Display*dpy, Window win)
 {
   WinListItem*t=calloc(1,sizeof(WinListItem));
   t->win=win;
-  XSelectInput(dpy,win,PropertyChangeMask|FocusChangeMask|StructureNotifyMask);
+  XSelectInput(dpy,win,KeyPressMask|PropertyChangeMask|FocusChangeMask|StructureNotifyMask);
   if (!*list) {
     *list=t;
     return;
@@ -1509,7 +1519,7 @@ static void winlist_free_all(WinListItem*list)
 #define EVENT_ATOM_COUNT (sizeof(event_names)/sizeof(char*))
 
 
-XCTRL_API void event_loop(Display*disp, EventCallback cb, void*cb_data)
+XCTRL_API void event_loop(Display* disp, EventCallback cb, void* cb_data)
 {
   XEvent ev;
   enum {
@@ -1547,7 +1557,7 @@ XCTRL_API void event_loop(Display*disp, EventCallback cb, void*cb_data)
     old_disp=disp;
     XInternAtoms(disp,event_names,EVENT_ATOM_COUNT,False,&event_atoms[0]);
   }
-  XSelectInput(disp, DefRootWin, PropertyChangeMask);
+  XSelectInput(disp, DefRootWin, KeyPressMask|PropertyChangeMask);
   while (1) {
     int rv=1;
     XNextEvent(disp, &ev);
@@ -1577,7 +1587,7 @@ XCTRL_API void event_loop(Display*disp, EventCallback cb, void*cb_data)
               if ( do_del ) {
                 Window x=p1->win;
                 winlist_del_item(&ev_winlist, p1->win);
-                rv=cb(XCTRL_EVENT_WINDOW_LIST_DELETE,x,cb_data);
+                rv=cb(XCTRL_EVENT_WINDOW_LIST_DELETE,x,cb_data,0);
               }
               p1=p2;
             }
@@ -1591,33 +1601,33 @@ XCTRL_API void event_loop(Display*disp, EventCallback cb, void*cb_data)
               }
               if (!found) {
                 winlist_add_item(&ev_winlist,disp,clients[i]);
-                rv=cb(XCTRL_EVENT_WINDOW_LIST_INSERT,clients[i],cb_data);
+                rv=cb(XCTRL_EVENT_WINDOW_LIST_INSERT,clients[i],cb_data,0);
               }
             }
             if (clients) { XFree(clients); }
             break;
           }
           case EV_NET_CURRENT_DESKTOP: {
-            rv=cb(XCTRL_EVENT_DESKTOP_SWITCH,get_current_desktop(disp),cb_data);
+            rv=cb(XCTRL_EVENT_DESKTOP_SWITCH,get_current_desktop(disp),cb_data,0);
             break;
           }
           case EV_NET_WM_NAME: {
-            rv=cb(XCTRL_EVENT_WINDOW_TITLE,ev.xproperty.window,cb_data);
+            rv=cb(XCTRL_EVENT_WINDOW_TITLE,ev.xproperty.window,cb_data,ev.xproperty.state);
             break;
           }
           case EV_NET_WM_STATE: {
-            rv=cb(XCTRL_EVENT_WINDOW_STATE,ev.xproperty.window,cb_data);
+            rv=cb(XCTRL_EVENT_WINDOW_STATE,ev.xproperty.window,cb_data,ev.xproperty.state);
             break;
           }
           case EV_WM_NAME: { /* ignore WM_NAME if we can use _NET_WM_NAME instead */
             if (!has_net_wm_name(disp,ev.xproperty.window)) {
-              rv=cb(XCTRL_EVENT_WINDOW_TITLE,ev.xproperty.window,cb_data);
+              rv=cb(XCTRL_EVENT_WINDOW_TITLE,ev.xproperty.window,cb_data,ev.xproperty.state);
             }
             break;
           }
           case EV_WM_STATE: { /* ignore WM_STATE if we can use _NET_WM_STATE instead */
             if (!has_net_wm_state(disp,ev.xproperty.window)) {
-              rv=cb(XCTRL_EVENT_WINDOW_STATE,ev.xproperty.window,cb_data);
+              rv=cb(XCTRL_EVENT_WINDOW_STATE,ev.xproperty.window,cb_data,ev.xproperty.state);
             }
             break;
           }
@@ -1634,15 +1644,19 @@ XCTRL_API void event_loop(Display*disp, EventCallback cb, void*cb_data)
         break;
       }
       case ConfigureNotify: {
-        rv=cb(XCTRL_EVENT_WINDOW_MOVE_RESIZE,ev.xconfigure.window,cb_data);
+        rv=cb(XCTRL_EVENT_WINDOW_MOVE_RESIZE,ev.xconfigure.window,cb_data,0);
         break;
       }
       case FocusIn: {
-        rv=cb(XCTRL_EVENT_WINDOW_FOCUS_GAINED,ev.xfocus.window,cb_data);
+        rv=cb(XCTRL_EVENT_WINDOW_FOCUS_GAINED,ev.xfocus.window,cb_data,ev.xfocus.detail);
         break;
       }
       case FocusOut: {
-        rv=cb(XCTRL_EVENT_WINDOW_FOCUS_LOST,ev.xfocus.window,cb_data);
+        rv=cb(XCTRL_EVENT_WINDOW_FOCUS_LOST,ev.xfocus.window,cb_data,ev.xfocus.detail);
+        break;
+      }
+      case KeyPress: {
+        rv=cb(XCTRL_EVENT_KEY_PRESS,ev.xkey.window,cb_data,XkbKeycodeToKeysym(disp,ev.xkey.keycode,0,ev.xkey.state&ShiftMask?1:0));
         break;
       }
       case DestroyNotify: { break; } /* unused */

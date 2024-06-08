@@ -123,11 +123,13 @@ another new object. This will help insure that the first instance is properly cl
 <td>-- Retreive text from X selection, clipboard, or cut buffer.</td></tr>
 <tr class="even"><td class="func"><a href="#send_keys">send_keys (win,keys)</a></td>
 <td>-- Send simulated keyboard actions to a window.</td></tr>
-<tr class="odd"><td class="func"><a href="#do_events"> do_events( [count] )</a></td>
+<tr class="odd"><td class="func"><a href="#string_to_keysym"> string_to_keysym (str)</a></td>
+<td>-- Get the keysym number of a string or a character.</td></tr>
+<tr class="even"><td class="func"><a href="#do_events"> do_events( [count] )</a></td>
 <td>-- Flush the X server's event queue.</td></tr>
-<tr class="even"><td class="func"><a href="#listen">listen (event_handler)</a></td>
+<tr class="odd"><td class="func"><a href="#listen">listen (event_handler)</a></td>
 <td>-- Monitor the window manager for events.</td></tr>
-<tr class="odd"><td class="func"><a href="#convert_locale">convert_locale (str,from,to)</a></td>
+<tr class="even"><td class="func"><a href="#convert_locale">convert_locale (str,from,to)</a></td>
 <td>-- Convert string between locales.</td></tr>
 </table>
 <hr>
@@ -445,6 +447,10 @@ functions of the numeric keypad on a standard U.S. keyboard.</p>
 Since this function only sends keystrokes to the application's top-level window, complex 
 applications with nested widgets and cascading menus might not exhibit consistent results.
 <br><br></p>
+<a name="string_to_keysym"></a><hr><h3><tt>string_to_keysym (str)</tt></h3>
+<p>
+Converts the string <tt><b><i>str</i></b></tt> to a <tt><b><i>keysym</i></b></tt> value (number) using the X11 keysym table. If no match is found, the function returns a value of <tt><b>0</b></tt>.
+<br><br></p>
 <a name="do_events"></a><hr><h3><tt>do_events ( [count] )</tt></h3>
 <p>
 Causes the library to sleep for approximately one-tenth of a second, and then sends an <tt><b>XSync()</b></tt> 
@@ -459,7 +465,7 @@ number of times (default: once).
 Continuously "listens" for window manager events, and runs the function <i><b>handler</b></i> 
 each time an event occurs.</p><p>
 The event handler function should be in the form of:
-<pre><b>  function event_handler(ev,id)
+<pre><b>  function event_handler(ev,id[,detail])
     </b><i>-- handle the event here</i><b>
     return true
   end
@@ -477,6 +483,7 @@ The value of the string <i><b>ev</b></i> will be one of:<br>
   &nbsp; <tt>"t"</tt> -- The window's title text changed.<br>
   &nbsp; <tt>"s"</tt> -- The window's state changed (iconified, maximized, sticky, layer, etc.)<br>
   &nbsp; <tt>"d"</tt> -- Switched desktops: in this case <i><b>id</b></i> is the index of the activated desktop.<br>
+  &nbsp; <tt>"k"</tt> -- A keyboard key has been pressed. Use the optional <i><b>detail</b></i> parameter to get the keysym of the pressed key.<br>
 </p><p>
 Unless noted above, the value of the integer <i><b>id</b></i> is the ID of the window
 that triggered the event.</p><p>
@@ -506,24 +513,28 @@ more efficient to set up a table of functions as illustrated below:
           io.write("The window ", id, " geometry changed.\n") 
           return true
         end,
-    t = function(id) 
-        io.write("The window ", id, " title changed.\n") 
-        return true
-      end,
-    s = function(id) 
-        io.write("The window ", id, " state changed.\n") 
-        return true
-      end,
+    t = function(id,detail) 
+          io.write("The window ", id, " title changed. State is ", detail, ".\n") 
+          return true
+        end,
+    s = function(id,detail) 
+          io.write("The window ", id, " state changed to state ", detail, ".\n") 
+          return true
+        end,
     d = function(id) 
           io.write("Switched to desktop number ", id, ".\n")
+          return true
+        end,
+    k = function(id,detail) 
+          io.write("A key was pressed in a window with id ", id, ". The keysym is ", detail, " which is the \"", string.char(detail), "\" key.\n")
           return true
         end
   }
 
-  function my_event_handler(ev,id)
+  function my_event_handler(ev,id,detail)
     local callback=event_callbacks[ev]
     if callback ~= nil then
-      return callback(id)
+      return callback(id,detail)
     else
       return true
     end
